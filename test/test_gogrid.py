@@ -41,6 +41,7 @@ class GoGridTests(unittest.TestCase, TestCaseMixin):
         node = self.driver.create_node(name='test1', image=image, size=size)
         self.assertEqual(node.name, 'test1')
         self.assertTrue(node.id is not None)
+        self.assertEqual(node.extra['password'], 'bebebe')
 
     def test_list_nodes(self):
         node = self.driver.list_nodes()[0]

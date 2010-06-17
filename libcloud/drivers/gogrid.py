@@ -275,8 +275,7 @@ class GoGridNodeDriver(NodeDriver):
 
             for i in nodes:
                 if i.public_ip[0] == node.public_ip[0] and i.id is not None:
-                    node.id = i.id
-                    return node
+                    return i
 
             waittime += interval
             time.sleep(interval)
