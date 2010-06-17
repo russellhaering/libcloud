@@ -130,6 +130,7 @@ class GoGridNodeDriver(NodeDriver):
     connectionCls = GoGridConnection
     type = Provider.GOGRID
     name = 'GoGrid API'
+    features = {"create_node": ["generates_password"]}
 
     _instance_types = GOGRID_INSTANCE_TYPES
 
@@ -187,7 +188,7 @@ class GoGridNodeDriver(NodeDriver):
             except KeyError:
                 pass
 
-        return [ self._to_node(el, passwords_map.get(el['id']))
+        return [ self._to_node(el, passwords_map.get(el.get('id')))
                  for el
                  in res['list'] ]
 
