@@ -122,6 +122,7 @@ class ParamikoSSHClient(BaseSSHClient):
                     'port': self.port,
                     'username': self.username,
                     'password': self.password,
+                    'key_filename': self.key,
                     'allow_agent': False,
                     'look_for_keys': False}
         self.client.connect(**conninfo)
