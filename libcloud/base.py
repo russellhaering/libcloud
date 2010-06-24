@@ -626,22 +626,33 @@ class NodeDriver(object):
         @keyword    deploy: Deployment to run once machine is online and availble to SSH.
         @type       deploy: L{Deployment}
 
+        @keyword    ssh_key: A path (or paths) to an SSH private key with which
+                             to attempt to authenticate.
+        @type       ssh_key: C{string} or C{list} of C{string}s
+
         See L{NodeDriver.create_node} for more keyword args.
         """
         # TODO: support ssh keys
         WAIT_PERIOD=3
-        password = None
+        ssh_key = None
 
         if 'generates_password' not in self.features["create_node"]:
-            if 'password' not in self.features["create_node"]:
-                raise NotImplementedError, \
-                    'deploy_node not implemented for this driver'
+            if 'ssh_key' not in kwargs:
+                if 'password' not in self.features["create_node"]:
+                    raise NotImplementedError, \
+                        'deploy_node not implemented for this driver'
 
-            if not kwargs.has_key('auth'):
-                kwargs['auth'] = NodeAuthPassword(os.urandom(16).encode('hex'))
+                defaultpass = NodeAuthPassword(os.urandom(16).encode('hex'))
 
-            password = kwargs['auth'].password
+            else:
+                ssh_key = kwargs['ssh_key']
+                defaultpass = NodeAuthPassword(None)
+
+            # What happens if kwargs['auth'] is an ssh key?
+            password = kwargs.setdefault('auth', defaultpass).password
+
         node = self.create_node(**kwargs)
+
         try:
           if 'generates_password' in self.features["create_node"]:
               password = node.extra.get('password')
@@ -665,7 +676,7 @@ class NodeDriver(object):
 
           client = SSHClient(hostname=node.public_ip[0],
                               port=22, username='root',
-                              password=password)
+                              password=password, key=ssh_key)
           laste = None
           while time.time() < end:
               laste = None
