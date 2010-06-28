@@ -632,7 +632,6 @@ class NodeDriver(object):
 
         See L{NodeDriver.create_node} for more keyword args.
         """
-        # TODO: support ssh keys
         WAIT_PERIOD=3
         ssh_key = None
 
