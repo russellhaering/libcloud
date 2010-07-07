@@ -53,17 +53,17 @@ LINODE_API = "api.linode.com"
 LINODE_ROOT = "/"
 
 # Map of TOTALRAM to PLANID, allows us to figure out what plan
-# a particular node is on
-LINODE_PLAN_IDS = {360:'1',
-                   540:'2',
-                   720:'3',
-                  1080:'4',
-                  1440:'5',
-                  2880:'6',
-                  5760:'7',
-                  8640:'8',
-                 11520:'9',
-                 14400:'10'}
+# a particular node is on (updated with new plan sizes 6/28/10)
+LINODE_PLAN_IDS = {512:'1',
+                   768:'2',
+                  1024:'3',
+                  1536:'4',
+                  2048:'5',
+                  4096:'6',
+                  8192:'7',
+                 12288:'8',
+                 16384:'9',
+                 20480:'10'}
 
 
 class LinodeResponse(Response):
@@ -223,23 +223,20 @@ class LinodeNodeDriver(NodeDriver):
         #       lroot        [%name] %distro
         #       lswap        [%name] Swap Space
         #
-        # Datacenter logic:
-        #
-        #   As Linode requires choosing a datacenter, a little logic is done.
-        #
-        #   1. If the API key in use has all its Linodes in one DC, that DC will
-        #      be chosen (and can be overridden with linode_set_datacenter).
-        #
-        #   2. Otherwise (for both the "No Linodes" and "different DC" cases), a
-        #      datacenter must explicitly be chosen using linode_set_datacenter.
-        #
         # Please note that for safety, only 5 Linodes can be created per hour.
 
         name = kwargs["name"]
-        chosen = kwargs["location"].id
         image = kwargs["image"]
         size = kwargs["size"]
         auth = kwargs["auth"]
+
+        # Pick a location (resolves LIBCLOUD-41 in JIRA)
+        if "location" in kwargs:
+            chosen = kwargs["location"].id
+        elif self.datacenter:
+            chosen = self.datacenter
+        else:
+            raise LinodeException(0xFB, "Need to select a datacenter first")
 
         # Step 0: Parameter validation before we purchase
         # We're especially careful here so we don't fail after purchase, rather
@@ -321,6 +318,14 @@ class LinodeNodeDriver(NodeDriver):
         }
         data = self.connection.request(LINODE_ROOT, params=params).object
         linode = { "id": data["LinodeID"] }
+
+        # Step 1b. linode.update to rename the Linode
+        params = {
+            "api_action": "linode.update",
+            "LinodeID": linode["id"],
+            "Label": name
+        }
+        data = self.connection.request(LINODE_ROOT, params=params).object
 
         # Step 2: linode.disk.createfromdistribution
         if not root:
@@ -430,12 +435,6 @@ class LinodeNodeDriver(NodeDriver):
 
     def linode_set_datacenter(self, did):
         # Set the datacenter for create requests.
-        #
-        # Create will try to guess, based on where all of the API key's
-        # Linodes are located; if they are all in one location, Create will
-        # make a new node there.  If there are NO Linodes on the account or
-        # Linodes are in multiple locations, it is imperative to set this or
-        # creates will fail.
         params = { "api_action": "avail.datacenters" }
         data = self.connection.request(LINODE_ROOT, params=params).object
         for dc in data:
