@@ -30,6 +30,7 @@ except: import simplejson as json
 HOST = 'api.gogrid.com'
 PORTS_BY_SECURITY = { True: 443, False: 80 }
 API_VERSION = '1.3'
+JSON_RETRIES = 20
 
 STATE = {
     "Starting": NodeState.PENDING,
@@ -110,6 +111,17 @@ class GoGridConnection(ConnectionUserAndKey):
         """ create sig from md5 of key + secret + time """
         m = hashlib.md5(key+secret+str(int(time.time())))
         return m.hexdigest()
+
+    def request(self, *args, **kwargs):
+        # Ignore the first few failures on GET requests
+        if kwargs.get('method') in (None, 'GET'):
+            for i in xrange(JSON_RETRIES - 1):
+                try:
+                    return super(GoGridConnection, self).request(*args, **kwargs)
+                except ValueError, e:
+                    time.sleep(10)
+                    pass
+        return super(GoGridConnection, self).request(*args, **kwargs)
 
 class GoGridNode(Node):
     # Generating uuid based on public ip to get around missing id on
@@ -216,11 +228,13 @@ class GoGridNodeDriver(NodeDriver):
     def _server_power(self, id, power):
         # power in ['start', 'stop', 'restart']
         params = {'id': id, 'power': power}
-        return self.connection.request("/api/grid/server/power", params)
+        return self.connection.request("/api/grid/server/power", params,
+                                        method='POST')
 
     def _server_delete(self, id):
         params = {'id': id}
-        return self.connection.request("/api/grid/server/delete", params)
+        return self.connection.request("/api/grid/server/delete", params,
+                                        method='POST')
 
     def _get_first_ip(self):
         params = {'ip.state': 'Unassigned', 'ip.type': 'public'}
@@ -252,7 +266,7 @@ class GoGridNodeDriver(NodeDriver):
                   'ip': first_ip}
 
         object = self.connection.request('/api/grid/server/add',
-                                         params=params).object
+                                         params=params, method='POST').object
         node = self._to_node(object['list'][0])
 
         return node
