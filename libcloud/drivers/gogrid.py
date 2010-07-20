@@ -287,7 +287,7 @@ class GoGridNodeDriver(NodeDriver):
 
         timeout = 60 * 20
         waittime = 0
-        interval = 2 * 60
+        interval = 10
 
         while node.id is None and waittime < timeout:
             nodes = self.list_nodes()
