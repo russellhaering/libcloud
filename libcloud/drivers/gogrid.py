@@ -31,6 +31,7 @@ HOST = 'api.gogrid.com'
 PORTS_BY_SECURITY = { True: 443, False: 80 }
 API_VERSION = '1.3'
 JSON_RETRIES = 20
+MASHERY_NOT_FOUND = 'ERR_596_SERVICE_NOT_FOUND'
 
 STATE = {
     "Starting": NodeState.PENDING,
@@ -72,6 +73,8 @@ GOGRID_INSTANCE_TYPES = {'512MB': {'id': '512MB',
                        'bandwidth': None,
                        'price':1.52}}
 
+class MasheryNotFoundError(Exception):
+    pass
 
 class GoGridResponse(Response):
     def success(self):
@@ -79,6 +82,8 @@ class GoGridResponse(Response):
             raise InvalidCredsException()
         if not self.body:
             return None
+        if self.headers.get('x-mashery-error-code') == MASHERY_NOT_FOUND:
+            raise MasheryNotFoundError('Mashery Proxy reports Service Not Found')
         return json.loads(self.body)['status'] == 'success'
 
     def parse_body(self):
@@ -114,13 +119,12 @@ class GoGridConnection(ConnectionUserAndKey):
 
     def request(self, *args, **kwargs):
         # Ignore the first few failures on GET requests
-        if kwargs.get('method') in (None, 'GET'):
-            for i in xrange(JSON_RETRIES - 1):
-                try:
-                    return super(GoGridConnection, self).request(*args, **kwargs)
-                except ValueError, e:
-                    time.sleep(10)
-                    pass
+        for i in xrange(JSON_RETRIES - 1):
+            try:
+                return super(GoGridConnection, self).request(*args, **kwargs)
+            except MasheryNotFoundError, e:
+                time.sleep(10)
+                pass
         return super(GoGridConnection, self).request(*args, **kwargs)
 
 class GoGridNode(Node):

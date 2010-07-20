@@ -692,8 +692,6 @@ class NodeDriver(object):
           client.close()
         except DeploymentException, e:
           raise
-        except Exception, e:
-          raise DeploymentException(node, e)
         return n
 
 def is_private_subnet(ip):
