@@ -145,7 +145,7 @@ class GoGridNodeDriver(NodeDriver):
 
     connectionCls = GoGridConnection
     type = Provider.GOGRID
-    name = 'GoGrid API'
+    name = 'GoGrid'
     features = {"create_node": ["generates_password"]}
 
     _instance_types = GOGRID_INSTANCE_TYPES
